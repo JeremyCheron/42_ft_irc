@@ -17,6 +17,8 @@
 #include <vector>
 #include <poll.h>
 #include <netinet/in.h>
+#include "Channel.hpp"
+#include "Client.hpp"
 
 class Client;
 
@@ -29,8 +31,10 @@ class Server {
 
 		std::string getPassword() const;
 		void rejectClient(int clientFd, const std::string &reason);
-
 		void run();
+
+		void joinChannel(Client& client, const std::string& string);
+		Channel * getChannel(std::string string);
 
 	private:
 
@@ -39,6 +43,7 @@ class Server {
 		std::string _password;
 		std::vector<pollfd> _pollFds;
 		std::map<int, Client> _clients;
+		std::map<std::string, Channel*> _channelsMap;
 
 		void setupSocket();
 		void acceptClient();

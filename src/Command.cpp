@@ -40,6 +40,10 @@ void CommandHandler::handleCommand(const std::string &line, Client &client, Serv
 		handleUser(tokens, client);
 	else if (cmd == "PASS")
 		handlePass(tokens, client, server);
+	else if (cmd == "JOIN")
+		handleJoin(tokens, client, server);
+	else if (cmd == "PRIVMSG")
+		handlePrivmsg(tokens, client, server);
 	else {
 		if (!client.isRegistered()) {
 			std::string msg = ":ft_irc 451 * : You have not registered\r\n";
@@ -77,5 +81,34 @@ void CommandHandler::handlePass(const std::vector<std::string> &params, Client &
 	} else {
 		std::cout << "[PASS rejected]" <<std::endl;
 		server.rejectClient(client.getFd(), "Incorrect password");
+	}
+}
+
+void CommandHandler::handleJoin(const std::vector<std::string> &params, Client &client, Server &server) {
+	std::cout << "[JOIN command received]" << std::endl;
+	if (params.size() < 2) return;
+	if (client.isRegistered()) {
+		std::string channel = params[1];
+		server.joinChannel(client, channel);
+	}
+}
+
+void CommandHandler::handlePrivmsg(const std::vector<std::string> &params, Client &client, Server &server) {
+	if (params.size() < 3) return;
+	std::string target = params[1];
+	std::string message;
+	// message
+	for (size_t i = 2; i < params.size(); ++i) {
+		if (i > 2) message += " ";
+		message += params[i];
+	}
+	if (!target.empty() && !message.empty()) {
+		Channel* channel = server.getChannel(target);
+		std::cout << "[PRIVMSG to " << target << "]: " << message << std::endl;
+		if (channel && channel->getClients().count(&client)) {
+			std::cout << "[Broadcasting message to channel " << target << "]" << std::endl;
+			std::string msg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost PRIVMSG " + target + " :" + message + "\r\n";
+			channel->broadcast(msg, &client);
+		}
 	}
 }

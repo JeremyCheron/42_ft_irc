@@ -13,6 +13,7 @@
 #include "Server.hpp"
 #include "Client.hpp"
 #include "Command.hpp"
+#include "Channel.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <cstring>
@@ -47,7 +48,7 @@ void Server::setupSocket() {
 	serverAddr.sin_addr.s_addr = INADDR_ANY;
 	serverAddr.sin_port = htons(_port);
 
-	if (bind(_serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
+	if (bind(_serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0)
 		throw std::runtime_error("Bind failed");
 
 	if (listen(_serverSocket, 10) < 0)
@@ -83,7 +84,7 @@ void Server::run() {
 void Server::acceptClient() {
 	sockaddr_in clientAddr;
 	socklen_t len = sizeof(clientAddr);
-	int clientFd = accept(_serverSocket, (struct sockaddr *)&clientAddr, &len);
+	int clientFd = accept(_serverSocket, (struct sockaddr *) &clientAddr, &len);
 
 	if (clientFd < 0)
 		return;
@@ -150,4 +151,57 @@ void Server::rejectClient(int clientFd, const std::string &reason) {
 	std::string message = ":ft_irc 464 * :" + reason + "\r\n";
 	send(clientFd, message.c_str(), message.size(), 0);
 	disconnectClient(clientFd);
+}
+
+
+void Server::joinChannel(Client &client, const std::string &string) {
+	std::cout << "Client " << client.getNickname() << " is trying to join channel: " << string << std::endl;
+	Channel *channel = NULL;
+	std::map<std::string, Channel *>::iterator it = _channelsMap.find(string);
+	if (it != _channelsMap.end()) {
+		channel = it->second;
+		channel->addClient(&client, false);
+		std::cout << client.getNickname() << " joined channel " << string << std::endl;
+	} else {
+		channel = new Channel(string);
+		_channelsMap[string] = channel;
+		channel->addClient(&client, true);
+		std::cout << client.getNickname() << " created and joined channel " << string << std::endl;
+	}
+
+	// Envoi du message JOIN au client
+	std::string joinMsg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost JOIN :" + string +
+	                      "\r\n";
+	send(client.getFd(), joinMsg.c_str(), joinMsg.length(), 0);
+
+	// Envoi du topic
+	std::string topic = channel->getTopic();
+	if (topic.empty()) {
+		std::string noTopic = ":ft_irc 331 " + client.getNickname() + " " + string + " :No topic is set\r\n";
+		send(client.getFd(), noTopic.c_str(), noTopic.length(), 0);
+	} else {
+		std::string topicMsg = ":ft_irc 332 " + client.getNickname() + " " + string + " :" + topic + "\r\n";
+		send(client.getFd(), topicMsg.c_str(), topicMsg.length(), 0);
+	}
+
+	// Envoi de la liste des utilisateurs
+	std::string names = ":ft_irc 353 " + client.getNickname() + " = " + string + " :";
+	for (std::map<Client *, bool>::const_iterator cit = channel->getClients().begin();
+	     cit != channel->getClients().end(); ++cit) {
+		if (cit != channel->getClients().begin())
+			names += " ";
+		names += cit->first->getNickname();
+	}
+	names += "\r\n";
+	send(client.getFd(), names.c_str(), names.length(), 0);
+	std::string endNames = ":ft_irc 366 " + client.getNickname() + " " + string + " :End of /NAMES list.\r\n";
+	send(client.getFd(), endNames.c_str(), endNames.length(), 0);
+}
+
+Channel * Server::getChannel(std::string string) {
+	std::map<std::string, Channel *>::iterator it = _channelsMap.find(string);
+	if (it != _channelsMap.end()) {
+		return it->second;
+	}
+	return NULL;
 }
