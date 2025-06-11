@@ -55,6 +55,12 @@ const std::map<Client *, bool> &Channel::getClients() const {
 }
 
 void Channel::broadcast(const std::string& message, Client* sender) {
+	std::cout << "\033[1;33m[DEBUG][BROADCAST]\033[0m sender fd=" << (sender ? sender->getFd() : -1) << std::endl;
+	std::cout << "\033[1;33m[DEBUG][BROADCAST]\033[0m Destinataires : ";
+	for (std::map<Client*, bool>::const_iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		std::cout << "[fd=" << it->first->getFd() << ", nick=" << it->first->getNickname() << "] ";
+	}
+	std::cout << std::endl;
 	for (std::map<Client*, bool>::const_iterator it = _clients.begin(); it != _clients.end(); ++it) {
 		if (it->first != sender) {
 			send(it->first->getFd(), message.c_str(), message.length(), 0);
