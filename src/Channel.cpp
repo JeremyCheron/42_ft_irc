@@ -6,7 +6,7 @@
 
 #include <iostream>
 #include <sys/socket.h>
-#include <__ostream/basic_ostream.h>
+// #include <__ostream/basic_ostream.h>
 
 // ──────────────────────────────────── Constructor ─────────────────────────────────────
 

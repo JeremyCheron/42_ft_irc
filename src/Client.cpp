@@ -11,6 +11,8 @@
 /* ************************************************************************** */
 
 #include "../includes/Client.hpp"
+#include <sys/socket.h>
+#include <iostream>
 
 Client::Client() : _fd(-1) {}
 
@@ -66,4 +68,26 @@ void Client::setAuthenticated(bool auth) {
 
 bool Client::isRegistered() const {
 	return _authenticated && !_nickname.empty() && !_username.empty();
+}
+
+bool Client::hasNick() const { return !_nickname.empty(); }
+
+bool Client::hasUser() const { return !_username.empty(); }
+
+bool Client::isReadyToRegister() const {
+	std::cout << "[Check register] auth: " << isAuthenticated()
+	          << ", nick: " << hasNick()
+	          << ", user: " << hasUser()
+	          << ", registered: " << _registered << std::endl;
+	return isAuthenticated() && hasNick() && hasUser() && !_registered;
+}
+
+void Client::tryRegister() {
+	std::cout << "[tryRegister called]" << std::endl;
+	if (isReadyToRegister()) {
+		_registered = true;
+		std::cout << "[Client registered]" << std::endl;
+		std::string welcome = ":ft_irc 001 " + _nickname + " :Welcome to the ft_irc server\r\n";
+		send(_fd, welcome.c_str(), welcome.size(), 0);
+	}
 }

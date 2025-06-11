@@ -32,10 +32,15 @@ class Client {
 		void appendToBuffeR(const std::string &data);
 		void clearLineBuffer(size_t len);
 
+		bool hasNick() const;
+		bool hasUser() const;
+		bool isReadyToRegister() const;
+
 		bool isAuthenticated() const;
 		void setAuthenticated(bool auth);
 
 		bool isRegistered() const;
+		void tryRegister();
 
 	private:
 
@@ -45,4 +50,5 @@ class Client {
 		std::string _hostname;
 		std::string _buffer;
 		bool _authenticated;
+		bool _registered;
 };
