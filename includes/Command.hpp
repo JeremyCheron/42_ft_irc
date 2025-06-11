@@ -27,4 +27,5 @@ namespace CommandHandler {
 	// Channel
 	void handleJoin(const std::vector<std::string> &params, Client &client, Server &server);
 	void handlePrivmsg(const std::vector<std::string> &params, Client &client, Server &server);
+	void handleTopic(const std::vector<std::string> &params, Client &client, Server &server);
 }

@@ -186,16 +186,44 @@ void Server::joinChannel(Client &client, const std::string &string) {
 
 	// Envoi de la liste des utilisateurs
 	std::string names = ":ft_irc 353 " + client.getNickname() + " = " + string + " :";
-	for (std::map<Client *, bool>::const_iterator cit = channel->getClients().begin();
-	     cit != channel->getClients().end(); ++cit) {
-		if (cit != channel->getClients().begin())
+	bool first = true;
+	for (std::map<Client*, bool>::const_iterator cit = channel->getClients().begin(); cit != channel->getClients().end(); ++cit) {
+		if (!first)
 			names += " ";
+		first = false;
+		if (channel->isClientOperator(cit->first))
+			names += "@";
 		names += cit->first->getNickname();
 	}
 	names += "\r\n";
 	send(client.getFd(), names.c_str(), names.length(), 0);
 	std::string endNames = ":ft_irc 366 " + client.getNickname() + " " + string + " :End of /NAMES list.\r\n";
 	send(client.getFd(), endNames.c_str(), endNames.length(), 0);
+
+	// LOGS AMÉLIORÉS AVEC COULEURS
+	std::cout << "\033[1;34m[JOIN]\033[0m Client \033[1;32m" << client.getNickname() << "\033[0m (fd=" << client.getFd() << ") rejoint le channel \033[1;36m" << string << "\033[0m" << std::endl;
+	if (it != _channelsMap.end()) {
+		std::cout << "\033[1;33m[INFO]\033[0m Ajout de " << client.getNickname() << " dans le channel existant " << string << std::endl;
+	} else {
+		std::cout << "\033[1;33m[INFO]\033[0m Création du channel \033[1;36m" << string << "\033[0m et ajout de " << client.getNickname() << " comme opérateur" << std::endl;
+	}
+
+	if (topic.empty()) {
+		std::cout << "\033[1;35m[TOPIC]\033[0m Aucun topic défini pour " << string << std::endl;
+	} else {
+		std::cout << "\033[1;35m[TOPIC]\033[0m Topic de " << string << ": '" << topic << "'" << std::endl;
+	}
+
+	// Envoi de la liste des utilisateurs
+	std::cout << "\033[1;36m[USERS]\033[0m Liste des utilisateurs dans " << string << ": ";
+	for (std::map<Client*, bool>::const_iterator cit = channel->getClients().begin(); cit != channel->getClients().end(); ++cit) {
+		if (channel->isClientOperator(cit->first))
+			std::cout << "@";
+		std::cout << cit->first->getNickname();
+		if (++std::map<Client*, bool>::const_iterator(cit) != channel->getClients().end())
+			std::cout << ", ";
+	}
+	std::cout << std::endl;
 }
 
 Channel * Server::getChannel(std::string string) {

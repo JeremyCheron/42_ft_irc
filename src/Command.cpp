@@ -44,6 +44,8 @@ void CommandHandler::handleCommand(const std::string &line, Client &client, Serv
 		handleJoin(tokens, client, server);
 	else if (cmd == "PRIVMSG")
 		handlePrivmsg(tokens, client, server);
+	else if (cmd == "TOPIC")
+		handleTopic(tokens, client, server);
 	else {
 		if (!client.isRegistered()) {
 			std::string msg = ":ft_irc 451 * : You have not registered\r\n";
@@ -57,13 +59,13 @@ void CommandHandler::handleCommand(const std::string &line, Client &client, Serv
 void CommandHandler::handleNick(const std::vector<std::string> &params, Client &client) {
 	if (params.size() < 2) return;
 	client.setNickname(params[1]);
-	std::cout << "[NICK set to]: " << params[1] << std::endl;
+	std::cout << "\033[1;36m[NICK]\033[0m Changement de pseudo: " << params[1] << std::endl;
 }
 
 void CommandHandler::handleUser(const std::vector<std::string> &params, Client &client) {
 	if (params.size() < 2) return;
 	client.setUsername(params[1]);
-	std::cout << "[USER set to]: " << params[1] << std::endl;
+	std::cout << "\033[1;36m[USER]\033[0m Changement de username: " << params[1] << std::endl;
 
 	if (client.isRegistered()) {
 		std::string welcome = ":ft_irc 001 " + client.getNickname() + " :Welcome to the ft_irc server\r\n";
@@ -77,15 +79,15 @@ void CommandHandler::handlePass(const std::vector<std::string> &params, Client &
 
 	if (params[1] == server.getPassword()) {
 		client.setAuthenticated(true);
-		std::cout << "[PASS accepted]" <<std::endl;
+		std::cout << "\033[1;32m[PASS]\033[0m Mot de passe accepté" << std::endl;
 	} else {
-		std::cout << "[PASS rejected]" <<std::endl;
+		std::cout << "\033[1;31m[PASS]\033[0m Mot de passe refusé" << std::endl;
 		server.rejectClient(client.getFd(), "Incorrect password");
 	}
 }
 
 void CommandHandler::handleJoin(const std::vector<std::string> &params, Client &client, Server &server) {
-	std::cout << "[JOIN command received]" << std::endl;
+	std::cout << "\033[1;34m[JOIN]\033[0m Commande JOIN reçue de " << client.getNickname() << std::endl;
 	if (params.size() < 2) return;
 	if (client.isRegistered()) {
 		std::string channel = params[1];
@@ -97,18 +99,51 @@ void CommandHandler::handlePrivmsg(const std::vector<std::string> &params, Clien
 	if (params.size() < 3) return;
 	std::string target = params[1];
 	std::string message;
-	// message
 	for (size_t i = 2; i < params.size(); ++i) {
 		if (i > 2) message += " ";
 		message += params[i];
 	}
 	if (!target.empty() && !message.empty()) {
 		Channel* channel = server.getChannel(target);
-		std::cout << "[PRIVMSG to " << target << "]: " << message << std::endl;
+		std::cout << "\033[1;35m[PRIVMSG]\033[0m Message de " << client.getNickname() << " vers " << target << ": " << message << std::endl;
 		if (channel && channel->getClients().count(&client)) {
-			std::cout << "[Broadcasting message to channel " << target << "]" << std::endl;
+			std::cout << "\033[1;33m[INFO]\033[0m Broadcast du message à " << target << std::endl;
 			std::string msg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost PRIVMSG " + target + " :" + message + "\r\n";
 			channel->broadcast(msg, &client);
 		}
+	}
+}
+
+void CommandHandler::handleTopic(const std::vector<std::string> &params, Client &client, Server &server) {
+	if (params.size() < 2) return;
+	std::string channelName = params[1];
+	Channel* channel = server.getChannel(channelName);
+	if (!channel) {
+		std::string msg = ":ft_irc 403 " + client.getNickname() + " " + channelName + " :No such channel\r\n";
+		send(client.getFd(), msg.c_str(), msg.size(), 0);
+		std::cout << "\033[1;31m[TOPIC]\033[0m Channel inexistant: " << channelName << std::endl;
+		return;
+	}
+	if (params.size() == 2) {
+		std::string topic = channel->getTopic();
+		if (topic.empty()) {
+			std::string noTopicMsg = ":ft_irc 331 " + client.getNickname() + " " + channelName + " :No topic is set\r\n";
+			send(client.getFd(), noTopicMsg.c_str(), noTopicMsg.size(), 0);
+			std::cout << "\033[1;35m[TOPIC]\033[0m Aucun topic défini pour " << channelName << std::endl;
+		} else {
+			std::string topicMsg = ":ft_irc 332 " + client.getNickname() + " " + channelName + " :" + topic + "\r\n";
+			send(client.getFd(), topicMsg.c_str(), topicMsg.size(), 0);
+			std::cout << "\033[1;35m[TOPIC]\033[0m Topic actuel de " << channelName << ": '" << topic << "'" << std::endl;
+		}
+	} else {
+		std::string newTopic;
+		for (size_t i = 2; i < params.size(); ++i) {
+			if (i > 2) newTopic += " ";
+			newTopic += params[i];
+		}
+		channel->setTopic(newTopic);
+		std::string topicSetMsg = ":ft_irc 332 " + client.getNickname() + " " + channelName + " " + newTopic + "\r\n";
+		send(client.getFd(), topicSetMsg.c_str(), topicSetMsg.size(), 0);
+		std::cout << "\033[1;35m[TOPIC]\033[0m \033[1;32mTopic modifié\033[0m pour " << channelName << ": '" << newTopic << "' par " << client.getNickname() << std::endl;
 	}
 }

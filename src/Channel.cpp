@@ -6,18 +6,17 @@
 
 #include <iostream>
 #include <sys/socket.h>
-#include <__ostream/basic_ostream.h>
 
 // ──────────────────────────────────── Constructor ─────────────────────────────────────
 
 Channel::Channel(const std::string &topic) : _topic(topic) {
-	std::cout << "+ Channel created :" << topic << std::endl;
+	std::cout << "\033[1;32m[+] Channel créé : \033[1;36m" << topic << "\033[0m" << std::endl;
 }
 
 // ──────────────────────────────────── Destructor ─────────────────────────────────────
 
 Channel::~Channel() {
-	std::cout << "- Channel destroyed :" << _topic << std::endl;
+	std::cout << "\033[1;31m[-] Channel détruit : \033[1;36m" << _topic << "\033[0m" << std::endl;
 }
 
 // ────────────────────────────────────── Getters ──────────────────────────────────────
@@ -36,7 +35,7 @@ void Channel::setTopic(std::string topic) {
 
 void Channel::addClient(Client *client, bool isOperator) {
 	_clients[client] = isOperator;
-	std::cout << "[+] " << client->getNickname() << " joined " << _topic << std::endl;
+	std::cout << (isOperator ? "\033[1;33m[OP+]" : "[+]") << " " << client->getNickname() << " a rejoint " << _topic << std::endl;
 }
 
 bool Channel::isClientOperator(Client *client) const {

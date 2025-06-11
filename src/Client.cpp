@@ -12,9 +12,15 @@
 
 #include "../includes/Client.hpp"
 
-Client::Client() : _fd(-1) {}
+#include <iostream>
 
-Client::Client(int fd) : _fd(fd) {}
+Client::Client() : _fd(-1) {
+	std::cout << "\033[1;32m[+] Client créé (fd=" << _fd << ")\033[0m" << std::endl;
+}
+
+Client::Client(int fd) : _fd(fd) {
+	std::cout << "\033[1;32m[+] Client créé (fd=" << fd << ")\033[0m" << std::endl;
+}
 
 int Client::getFd() const {
 	return _fd;
@@ -38,14 +44,17 @@ const std::string &Client::getBuffer() const {
 
 void Client::setNickname(const std::string &nick) {
 	_nickname = nick;
+	std::cout << "\033[1;36m[NICK]\033[0m Changement de pseudo: " << nick << std::endl;
 }
 
 void Client::setUsername(const std::string &user) {
 	_username = user;
+	std::cout << "\033[1;36m[USER]\033[0m Changement de username: " << user << std::endl;
 }
 
 void Client::setHostname(const std::string &host) {
 	_hostname = host;
+	std::cout << "\033[1;36m[HOST]\033[0m Changement de hostname: " << host << std::endl;
 }
 
 void Client::appendToBuffeR(const std::string &data) {
@@ -62,6 +71,7 @@ bool Client::isAuthenticated() const {
 
 void Client::setAuthenticated(bool auth) {
 	_authenticated = auth;
+	std::cout << (auth ? "\033[1;32m[AUTH]\033[0m Authentifié" : "\033[1;31m[AUTH]\033[0m Non authentifié") << std::endl;
 }
 
 bool Client::isRegistered() const {
