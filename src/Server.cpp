@@ -241,3 +241,7 @@ Client* Server::findClientByNickname(const std::string& nickname) {
 	}
 	return NULL;
 }
+
+std::map<std::string, Channel *> Server::getChannelsMap() {
+	return _channelsMap;
+}

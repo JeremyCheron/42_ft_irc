@@ -31,4 +31,6 @@ namespace CommandHandler {
 	void handleKick(const std::vector<std::string> &params, Client &client, Server &server);
 	void handlePing(const std::vector<std::string> &params, Client &client);
 	void handleWhois(const std::vector<std::string> &params, Client &client, Server &server);
+	void handleLeave(const std::vector<std::string> &params, Client &client, Server &server);
+	void handleQuit(Client &client, Server &server);
 }
