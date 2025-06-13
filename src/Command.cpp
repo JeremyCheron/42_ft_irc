@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Command.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jcheron <jcheron@student.42.fr>            +#+  +:+       +#+        */
+/*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/07 11:24:26 by jcheron           #+#    #+#             */
-/*   Updated: 2025/05/07 12:05:05 by jcheron          ###   ########.fr       */
+/*   Updated: 2025/06/13 16:24:44 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,6 +48,8 @@ void CommandHandler::handleCommand(const std::string &line, Client &client, Serv
 		handleTopic(tokens, client, server);
 	else if (cmd == "KICK")
 		handleKick(tokens, client, server);
+	else if (cmd == "MODE")
+		handleModes(tokens, client, server);
 	else if (cmd == "PING")
 		handlePing(tokens, client);
 	else if (cmd == "WHOIS")
@@ -178,10 +180,51 @@ void CommandHandler::handleKick(const std::vector<std::string> &params, Client &
 	}
 
 	std::string msg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost KICK " + channelName + " " + targetNick + " :" + reason + "\r\n";
-	channel->broadcast(msg, NULL); 
+	channel->broadcast(msg, NULL);
 	channel->removeClient(target);
 }
 
+void CommandHandler::handleModes(const std::vector<std::string> &params, Client &client, Server &server) {
+	if (params.size() < 2)
+	{
+		std::string error = MessageHelper::errNeedMoreParams("MODE");
+		return (void)send(client.getFd(), error.c_str(), error.length(), 0);
+	}
+	const std::string& channelName = params[1];
+
+	Channel *channel = server.getChannel(channelName);
+
+	if (!channel)
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::errNoSuchChannel(channelName));
+
+	if (params.size() == 2)
+	{
+		std::string	modes = "+";
+		std::string modesParams;
+
+		if (channel->hasMode('i')) modes += 'i';
+		if (channel->hasMode('t')) modes += 't';
+		if (channel->hasMode('k'))
+		{
+			modes += 'k';
+			modesParams += " " + channel->getKey();
+		}
+		if (channel->hasMode('l'))
+		{
+			modes += 'l';
+			std::ostringstream oss;
+			oss << channel->getUserLimit();
+			modesParams += " " + oss.str();
+		}
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::rplChannelModeIs(client.getNickname(), channelName, modes, modesParams));
+	}
+	else if (!channel->isClientOperator(&client))
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::errNotChannelOperator(client.getNickname(), channelName));
+	else
+	{
+
+	}
+}
 
 void CommandHandler::handlePing(const std::vector<std::string> &params, Client &client) {
 	if (params.size() < 2) return;
