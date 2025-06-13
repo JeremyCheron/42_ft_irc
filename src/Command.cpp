@@ -27,6 +27,22 @@ static std::vector<std::string> split(const std::string &str) {
 	return tokens;
 }
 
+typedef void (*CommandFunc)(const std::vector<std::string>&, Client&, Server&);
+
+static std::map<std::string, CommandFunc> initCommandMap() {
+	std::map<std::string, CommandFunc> m;
+	m["NICK"]    = &CommandHandler::handleNick;
+	m["USER"]    = &CommandHandler::handleUser;
+	m["PASS"]    = &CommandHandler::handlePass;
+	m["JOIN"]    = &CommandHandler::handleJoin;
+	m["PRIVMSG"] = &CommandHandler::handlePrivmsg;
+	m["TOPIC"]   = &CommandHandler::handleTopic;
+	m["KICK"]    = &CommandHandler::handleKick;
+	m["PING"]    = &CommandHandler::handlePing;
+	m["WHOIS"]   = &CommandHandler::handleWhois;
+	return m;
+}
+
 void CommandHandler::handleCommand(const std::string &line, Client &client, Server &server) {
 	std::vector<std::string> tokens = split(line);
 	if (tokens.empty()) return;
@@ -34,25 +50,12 @@ void CommandHandler::handleCommand(const std::string &line, Client &client, Serv
 	std::string cmd = tokens[0];
 	std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 
-	if (cmd == "NICK")
-		handleNick(tokens, client);
-	else if (cmd == "USER")
-		handleUser(tokens, client);
-	else if (cmd == "PASS")
-		handlePass(tokens, client, server);
-	else if (cmd == "JOIN")
-		handleJoin(tokens, client, server);
-	else if (cmd == "PRIVMSG")
-		handlePrivmsg(tokens, client, server);
-	else if (cmd == "TOPIC")
-		handleTopic(tokens, client, server);
-	else if (cmd == "KICK")
-		handleKick(tokens, client, server);
-	else if (cmd == "PING")
-		handlePing(tokens, client);
-	else if (cmd == "WHOIS")
-		handleWhois(tokens, client, server);
-	else {
+	static std::map<std::string, CommandFunc> commandMap = initCommandMap();
+
+	std::map<std::string, CommandFunc>::iterator it = commandMap.find(cmd);
+	if (it != commandMap.end()) {
+		it->second(tokens, client, server);
+	} else {
 		if (!client.isRegistered()) {
 			std::string msg = ":ft_irc 451 * : You have not registered\r\n";
 			send(client.getFd(), msg.c_str(), msg.size(), 0);
@@ -62,13 +65,50 @@ void CommandHandler::handleCommand(const std::string &line, Client &client, Serv
 	}
 }
 
-void CommandHandler::handleNick(const std::vector<std::string> &params, Client &client) {
+// void CommandHandler::handleCommand(const std::string &line, Client &client, Server &server) {
+// 	std::vector<std::string> tokens = split(line);
+// 	if (tokens.empty()) return;
+
+// 	std::string cmd = tokens[0];
+// 	std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+
+// 	if (cmd == "NICK")
+// 		handleNick(tokens, client);
+// 	else if (cmd == "USER")
+// 		handleUser(tokens, client);
+// 	else if (cmd == "PASS")
+// 		handlePass(tokens, client, server);
+// 	else if (cmd == "JOIN")
+// 		handleJoin(tokens, client, server);
+// 	else if (cmd == "PRIVMSG")
+// 		handlePrivmsg(tokens, client, server);
+// 	else if (cmd == "TOPIC")
+// 		handleTopic(tokens, client, server);
+// 	else if (cmd == "KICK")
+// 		handleKick(tokens, client, server);
+// 	else if (cmd == "PING")
+// 		handlePing(tokens, client);
+// 	else if (cmd == "WHOIS")
+// 		handleWhois(tokens, client, server);
+// 	else {
+// 		if (!client.isRegistered()) {
+// 			std::string msg = ":ft_irc 451 * : You have not registered\r\n";
+// 			send(client.getFd(), msg.c_str(), msg.size(), 0);
+// 			return;
+// 		}
+// 		std::cout << "[Unknown command]: " << cmd << std::endl;
+// 	}
+// }
+
+void CommandHandler::handleNick(const std::vector<std::string> &params, Client &client, Server &server) {
+	(void)server;
 	if (params.size() < 2) return;
 	client.setNickname(params[1]);
 	std::cout << "\033[1;36m[NICK]\033[0m Changement de pseudo: " << params[1] << std::endl;
 }
 
-void CommandHandler::handleUser(const std::vector<std::string> &params, Client &client) {
+void CommandHandler::handleUser(const std::vector<std::string> &params, Client &client, Server &server) {
+	(void)server;
 	if (params.size() < 2) return;
 	client.setUsername(params[1]);
 	std::cout << "\033[1;36m[USER]\033[0m Changement de username: " << params[1] << std::endl;
@@ -164,8 +204,13 @@ void CommandHandler::handleKick(const std::vector<std::string> &params, Client &
 
 	const std::string& channelName = params[1];
 	const std::string& targetNick = params[2];
-	std::string reason = (params.size() >= 4) ? params[3] : "No reason given";
-
+	std::string reason = "No reason given";
+	if (params.size() >= 4) {
+		reason = params[3];
+		for (size_t i = 4; i < params.size(); ++i) {
+			reason += " " + params[i];
+		}
+	}
 	Channel *channel = server.getChannel(channelName);
 	if (!channel) return;
 
@@ -188,8 +233,9 @@ void CommandHandler::handleKick(const std::vector<std::string> &params, Client &
 }
 
 
-void CommandHandler::handlePing(const std::vector<std::string> &params, Client &client) {
+void CommandHandler::handlePing(const std::vector<std::string> &params, Client &client, Server &server) {
 	if (params.size() < 2) return;
+	(void)server;
 	std::string pong = "PONG " + params[1] + "\r\n";
 	send(client.getFd(), pong.c_str(), pong.size(), 0);
 	std::cout << "[PING received, sent PONG]" << std::endl;
