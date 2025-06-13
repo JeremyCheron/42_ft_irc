@@ -20,6 +20,7 @@ SRC_DIR = src
 INC_DIR = includes
 
 SRC_FILES = main.cpp \
+			Channel.cpp \
 			Server.cpp \
 			Client.cpp \
 			Command.cpp

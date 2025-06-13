@@ -23,4 +23,12 @@ namespace CommandHandler {
 	void handleNick(const std::vector<std::string> &params, Client &client);
 	void handleUser(const std::vector<std::string> &params, Client &client);
 	void handlePass(const std::vector<std::string> &params, Client &client, Server &server);
+
+	// Channel
+	void handleJoin(const std::vector<std::string> &params, Client &client, Server &server);
+	void handlePrivmsg(const std::vector<std::string> &params, Client &client, Server &server);
+	void handleTopic(const std::vector<std::string> &params, Client &client, Server &server);
+	void handleKick(const std::vector<std::string> &params, Client &client, Server &server);
+	void handlePing(const std::vector<std::string> &params, Client &client);
+	void handleWhois(const std::vector<std::string> &params, Client &client, Server &server);
 }
