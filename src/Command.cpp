@@ -16,6 +16,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <unistd.h>
 
 static std::vector<std::string> split(const std::string &str) {
 	std::vector<std::string> tokens;
@@ -157,6 +158,9 @@ void CommandHandler::handlePrivmsg(const std::vector<std::string> &params, Clien
 			std::string msg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost PRIVMSG " + target + " :" + message + "\r\n";
 			channel->broadcast(msg, &client);
 		}
+		else {
+			std::cout << "\033[1;31m[ERROR]\033[0m Channel " << target << " inexistant ou client non membre." << std::endl;
+		}
 	}
 }
 
@@ -228,7 +232,7 @@ void CommandHandler::handleKick(const std::vector<std::string> &params, Client &
 	}
 
 	std::string msg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost KICK " + channelName + " " + targetNick + " :" + reason + "\r\n";
-	channel->broadcast(msg, NULL); 
+	channel->broadcast(msg, NULL);
 	channel->removeClient(target);
 }
 
@@ -257,4 +261,48 @@ void CommandHandler::handleWhois(const std::vector<std::string> &params, Client 
 	send(client.getFd(), rpl318.c_str(), rpl318.size(), 0);
 
 	std::cout << "[WHOIS for " << targetNick << "]" << std::endl;
+}
+
+void CommandHandler::handleLeave(const std::vector<std::string> &params, Client &client, Server &server) {
+	if (params.size() < 2) {
+		std::string msg = ":ft_irc 461 " + client.getNickname() + " " + "" + " :Not enough parameters\r\n";
+		send(client.getFd(), msg.c_str(), msg.size(), 0);
+		return;
+	}
+	const std::string& channelName = params[1];
+	Channel *channel = server.getChannel(channelName);
+	if (!channel) {
+		std::string msg = ":ft_irc 403 " + client.getNickname() + " " + channelName + " :No such channel\r\n";
+		send(client.getFd(), msg.c_str(), msg.size(), 0);
+		return;
+	}
+	if (channel->getClients().count(&client) == 0) {
+		std::string msg = ":ft_irc 442 " + client.getNickname() + " " + channelName + " :You're not on that channel\r\n";
+		send(client.getFd(), msg.c_str(), msg.size(), 0);
+		return;
+	}
+
+	channel->removeClient(&client);
+	std::string leaveMsg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost PART " + channelName + " :Leaving\r\n";
+	channel->broadcast(leaveMsg, &client);
+	send(client.getFd(), leaveMsg.c_str(), leaveMsg.size(), 0);
+	std::cout << "[LEAVE] Client " << client.getNickname() << " has left channel " << channelName << std::endl;
+}
+
+
+
+void CommandHandler::handleQuit(Client &client, Server &server) {
+    const std::map<std::string, Channel *>& channels = server.getChannelsMap();
+    for (std::map<std::string, Channel *>::const_iterator it = channels.begin(); it != channels.end(); ++it) {
+        Channel *channel = it->second;
+        if (channel->getClients().count(&client)) {
+            channel->removeClient(&client);
+            std::string partMsg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost PART " + channel->getTopic() + "\r\n";
+            channel->broadcast(partMsg, &client);
+        }
+    }
+    std::string msg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost QUIT :Client disconnected\r\n";
+    send(client.getFd(), msg.c_str(), msg.size(), 0);
+    std::cout << "[QUIT] Client " << client.getNickname() << " has disconnected." << std::endl;
+    close(client.getFd());
 }
