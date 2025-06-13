@@ -20,8 +20,9 @@ class Server;
 
 namespace CommandHandler {
 	void handleCommand(const std::string &line, Client &client, Server &server);
-	void handleNick(const std::vector<std::string> &params, Client &client);
-	void handleUser(const std::vector<std::string> &params, Client &client);
+	void handleNick(const std::vector<std::string>&, Client&, Server&);
+	void handleUser(const std::vector<std::string>&, Client&, Server&);
+	void handlePing(const std::vector<std::string>&, Client&, Server&);
 	void handlePass(const std::vector<std::string> &params, Client &client, Server &server);
 
 	// Channel
@@ -29,6 +30,7 @@ namespace CommandHandler {
 	void handlePrivmsg(const std::vector<std::string> &params, Client &client, Server &server);
 	void handleTopic(const std::vector<std::string> &params, Client &client, Server &server);
 	void handleKick(const std::vector<std::string> &params, Client &client, Server &server);
-	void handlePing(const std::vector<std::string> &params, Client &client);
 	void handleWhois(const std::vector<std::string> &params, Client &client, Server &server);
+
+	typedef void (*CommandFunc)(const std::vector<std::string>&, Client&, Server&);
 }
