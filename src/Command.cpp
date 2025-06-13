@@ -142,6 +142,11 @@ void CommandHandler::handleTopic(const std::vector<std::string> &params, Client 
 			std::cout << "\033[1;35m[TOPIC]\033[0m Topic actuel de " << channelName << ": '" << topic << "'" << std::endl;
 		}
 	} else {
+		if (channel->isClientOperator(&client) == false) {
+			std::string err = ":ft_irc 482 " + client.getNickname() + " " + channelName + " :You're not channel operator\r\n";
+			send(client.getFd(), err.c_str(), err.size(), 0);
+			return;
+		}
 		std::string newTopic;
 		for (size_t i = 2; i < params.size(); ++i) {
 			if (i > 2) newTopic += " ";
