@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/07 11:24:26 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/13 16:24:44 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/13 16:35:08 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -218,11 +218,21 @@ void CommandHandler::handleModes(const std::vector<std::string> &params, Client 
 		}
 		return MessageHelper::sendMsgToClient(&client, MessageHelper::rplChannelModeIs(client.getNickname(), channelName, modes, modesParams));
 	}
-	else if (!channel->isClientOperator(&client))
+	if (!channel->isClientOperator(&client))
 		return MessageHelper::sendMsgToClient(&client, MessageHelper::errNotChannelOperator(client.getNickname(), channelName));
-	else
-	{
 
+	std::string	modeString = params[2];
+	size_t		nextParamIndex = 3;
+	bool		adding = true;
+
+	for (size_t i = 0; i < modeString.length(); i++)
+	{
+		char	modeChar = modeString[i];
+
+		if (modeChar == '+')
+			adding = true;
+		else if (modeChar == '-')
+			adding = false;
 	}
 }
 
