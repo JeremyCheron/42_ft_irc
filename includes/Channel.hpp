@@ -39,6 +39,9 @@ public:
 	void broadcast(const std::string& message, Client* sender);
 
 	std::map<Client *, bool> const &getClients() const;
+
+	Client *getClientByNick(const std::string& nickname);
+
 };
 
 

@@ -46,6 +46,12 @@ void CommandHandler::handleCommand(const std::string &line, Client &client, Serv
 		handlePrivmsg(tokens, client, server);
 	else if (cmd == "TOPIC")
 		handleTopic(tokens, client, server);
+	else if (cmd == "KICK")
+		handleKick(tokens, client, server);
+	else if (cmd == "PING")
+		handlePing(tokens, client);
+	else if (cmd == "WHOIS")
+		handleWhois(tokens, client, server);
 	else {
 		if (!client.isRegistered()) {
 			std::string msg = ":ft_irc 451 * : You have not registered\r\n";
@@ -146,4 +152,58 @@ void CommandHandler::handleTopic(const std::vector<std::string> &params, Client 
 		send(client.getFd(), topicSetMsg.c_str(), topicSetMsg.size(), 0);
 		std::cout << "\033[1;35m[TOPIC]\033[0m \033[1;32mTopic modifié\033[0m pour " << channelName << ": '" << newTopic << "' par " << client.getNickname() << std::endl;
 	}
+}
+
+void CommandHandler::handleKick(const std::vector<std::string> &params, Client &client, Server &server) {
+	if (params.size() < 3) return;
+
+	const std::string& channelName = params[1];
+	const std::string& targetNick = params[2];
+	std::string reason = (params.size() >= 4) ? params[3] : "No reason given";
+
+	Channel *channel = server.getChannel(channelName);
+	if (!channel) return;
+
+	if (!channel->isClientOperator(&client)) {
+		std::string err = ":ft_irc 482 " + client.getNickname() + " " + channelName + " :You're not channel operator\r\n";
+		send(client.getFd(), err.c_str(), err.size(), 0);
+		return;
+	}
+
+	Client *target = channel->getClientByNick(targetNick);
+	if (!target) {
+		std::string err = ":ft_irc 441 " + client.getNickname() + " " + targetNick + " " + channelName + " :They aren't on that channel\r\n";
+		send(client.getFd(), err.c_str(), err.size(), 0);
+		return;
+	}
+
+	std::string msg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost KICK " + channelName + " " + targetNick + " :" + reason + "\r\n";
+	channel->broadcast(msg, NULL); 
+	channel->removeClient(target);
+}
+
+
+void CommandHandler::handlePing(const std::vector<std::string> &params, Client &client) {
+	if (params.size() < 2) return;
+	std::string pong = "PONG " + params[1] + "\r\n";
+	send(client.getFd(), pong.c_str(), pong.size(), 0);
+	std::cout << "[PING received, sent PONG]" << std::endl;
+}
+
+void CommandHandler::handleWhois(const std::vector<std::string> &params, Client &client, Server &server) {
+	if (params.size() < 2) return;
+
+	std::string targetNick = params[1];
+	Client* target = server.findClientByNickname(targetNick);
+	if (!target) return;
+
+	std::string rpl311 = ":ft_irc 311 " + client.getNickname() + " " + target->getNickname()
+		+ " " + target->getUsername() + " localhost * :" + target->getUsername() + "\r\n";
+	send(client.getFd(), rpl311.c_str(), rpl311.size(), 0);
+
+	std::string rpl318 = ":ft_irc 318 " + client.getNickname() + " " + target->getNickname()
+		+ " :End of WHOIS list\r\n";
+	send(client.getFd(), rpl318.c_str(), rpl318.size(), 0);
+
+	std::cout << "[WHOIS for " << targetNick << "]" << std::endl;
 }

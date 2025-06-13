@@ -25,6 +25,14 @@ std::string Channel::getTopic() const {
 	return _topic;
 }
 
+Client *Channel::getClientByNick(const std::string &nickname) {
+	for (std::map<Client *, bool>::const_iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->first->getNickname() == nickname)
+			return it->first;
+	}
+	return NULL;
+}
+
 // ────────────────────────────────────── Setters ──────────────────────────────────────
 
 void Channel::setTopic(std::string topic) {
