@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: jcheron <jcheron@student.42.fr>            +#+  +:+       +#+         #
+#    By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/05/06 12:24:12 by jcheron           #+#    #+#              #
-#    Updated: 2025/05/07 11:36:34 by jcheron          ###   ########.fr        #
+#    Updated: 2025/06/13 16:25:51 by cpoulain         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,7 +23,8 @@ SRC_FILES = main.cpp \
 			Channel.cpp \
 			Server.cpp \
 			Client.cpp \
-			Command.cpp
+			Command.cpp \
+			MessageHelper.cpp
 SRCS = $(addprefix $(SRC_DIR)/, $(SRC_FILES))
 
 OBJS = $(SRCS:.cpp=.o)

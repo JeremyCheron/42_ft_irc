@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Command.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jcheron <jcheron@student.42.fr>            +#+  +:+       +#+        */
+/*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/07 11:24:26 by jcheron           #+#    #+#             */
-/*   Updated: 2025/05/07 12:05:05 by jcheron          ###   ########.fr       */
+/*   Updated: 2025/06/16 15:29:20 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,7 +52,6 @@ void CommandHandler::handleCommand(const std::string &line, Client &client, Serv
 
 	std::string cmd = tokens[0];
 	std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
-
 	static std::map<std::string, CommandFunc> commandMap = initCommandMap();
 
 	std::map<std::string, CommandFunc>::iterator it = commandMap.find(cmd);
@@ -137,10 +136,10 @@ void CommandHandler::handlePass(const std::vector<std::string> &params, Client &
 
 void CommandHandler::handleJoin(const std::vector<std::string> &params, Client &client, Server &server) {
 	std::cout << "\033[1;34m[JOIN]\033[0m Commande JOIN reçue de " << client.getNickname() << std::endl;
-	if (params.size() < 2) return;
+	if (params.size() < 2) return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("JOIN"));
 	if (client.isRegistered()) {
 		std::string channel = params[1];
-		server.joinChannel(client, channel);
+		server.joinChannel(client, channel, params.size() < 3 ? "" : params[2]);
 	}
 }
 
@@ -187,12 +186,10 @@ void CommandHandler::handleTopic(const std::vector<std::string> &params, Client 
 			send(client.getFd(), topicMsg.c_str(), topicMsg.size(), 0);
 			std::cout << "\033[1;35m[TOPIC]\033[0m Topic actuel de " << channelName << ": '" << topic << "'" << std::endl;
 		}
-	} else {
-		if (channel->isClientOperator(&client) == false) {
-			std::string err = ":ft_irc 482 " + client.getNickname() + " " + channelName + " :You're not channel operator\r\n";
-			send(client.getFd(), err.c_str(), err.size(), 0);
-			return;
-		}
+	} else if (channel->hasMode('t') && !channel->isClientOperator(&client)) {
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::errNotChannelOperator(client.getNickname(), channelName));
+	}
+	else {
 		std::string newTopic;
 		for (size_t i = 2; i < params.size(); ++i) {
 			if (i > 2) newTopic += " ";
@@ -238,6 +235,108 @@ void CommandHandler::handleKick(const std::vector<std::string> &params, Client &
 	channel->removeClient(target);
 }
 
+void CommandHandler::handleModes(const std::vector<std::string> &params, Client &client, Server &server) {
+	if (params.size() < 2)
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("MODE"));
+	const std::string& channelName = params[1];
+
+	Channel *channel = server.getChannel(channelName);
+
+	if (!channel)
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::errNoSuchChannel(channelName));
+
+	if (params.size() == 2)
+	{
+		std::string	modes = "+";
+		std::string modesParams;
+
+		if (channel->hasMode('i')) modes += 'i';
+		if (channel->hasMode('t')) modes += 't';
+		if (channel->hasMode('k'))
+		{
+			modes += 'k';
+			modesParams += " " + channel->getKey();
+		}
+		if (channel->hasMode('l'))
+		{
+			modes += 'l';
+			std::ostringstream oss;
+			oss << channel->getUserLimit();
+			modesParams += " " + oss.str();
+		}
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::rplChannelModeIs(client.getNickname(), channelName, modes, modesParams));
+	}
+	if (!channel->isClientOperator(&client))
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::errNotChannelOperator(client.getNickname(), channelName));
+
+	std::string	modeString = params[2];
+	size_t		nextParamIndex = 3;
+	bool		adding = true;
+
+	for (size_t i = 0; i < modeString.length(); i++)
+	{
+		char	modeChar = modeString[i];
+
+		if (modeChar == '+')
+			adding = true;
+		else if (modeChar == '-')
+			adding = false;
+		else if (modeChar == 'i' || modeChar == 't')
+		{
+			if (adding)
+				channel->setMode(modeChar);
+			else
+				channel->unsetMode(modeChar);
+		}
+
+		else if (modeChar == 'k')
+		{
+			if (adding)
+			{
+				if (params.size() <= nextParamIndex)
+					return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("MODE"));
+				channel->setKey(params[nextParamIndex++]);
+			}
+			else
+				channel->unsetKey();
+		}
+
+		else if (modeChar == 'l')
+		{
+			if (adding)
+			{
+				if (params.size() <= nextParamIndex)
+					return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("MODE"));
+				int limit = atoi(params[nextParamIndex++].c_str());
+				channel->setUserLimit(limit);
+			}
+			else
+				channel->unsetUserLimit();
+		}
+		else if (modeChar == 'o')
+		{
+			if (params.size() <= nextParamIndex)
+				return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("MODE"));
+			std::string nick = params[nextParamIndex++];
+
+			Client *targetClient = channel->getClientByNick(nick);
+
+			if (!targetClient)
+				return MessageHelper::sendMsgToClient(&client, MessageHelper::errUserNotInChannel(client.getNickname(), channelName));
+			if (adding)
+				channel->addOperator(targetClient);
+			else
+				channel->removeOperator(targetClient);
+		}
+		else
+			return MessageHelper::sendMsgToClient(&client, MessageHelper::errUnknownModeError(client.getNickname(), modeChar));
+	}
+
+	std::vector<std::string> modeParams(params.begin() + 2, params.end());
+	std::string usermask = client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname();
+	std::string modeChangeMsg = MessageHelper::rplChannelModeChange(usermask, channelName, modeParams);
+	channel->broadcast(modeChangeMsg, NULL);
+}
 
 void CommandHandler::handlePing(const std::vector<std::string> &params, Client &client, Server &server) {
 	if (params.size() < 2) return;
@@ -264,7 +363,6 @@ void CommandHandler::handleWhois(const std::vector<std::string> &params, Client 
 
 	std::cout << "[WHOIS for " << targetNick << "]" << std::endl;
 }
-
 void CommandHandler::handleLeave(const std::vector<std::string> &params, Client &client, Server &server) {
 	if (params.size() < 2) {
 		std::string msg = ":ft_irc 461 " + client.getNickname() + " " + "" + " :Not enough parameters\r\n";
