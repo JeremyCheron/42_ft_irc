@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/13 13:33:23 by cpoulain          #+#    #+#             */
-/*   Updated: 2025/06/13 16:24:49 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/16 14:35:45 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #include <sstream>
 #include "Client.hpp"
 #include <netinet/in.h>
+#include <vector>
 
 class MessageHelper
 {
@@ -26,5 +27,8 @@ class MessageHelper
 		static std::string	errNeedMoreParams(const std::string &command);
 		static std::string	errNotChannelOperator(const std::string &clientNick, const std::string &channelName);
 		static std::string	errNoSuchChannel(const std::string &channelName);
+		static std::string	errUserNotInChannel(const std::string &nickname, const std::string &channelName);
+		static std::string	errUnknownModeError(const std::string &nickname, const char &modeChar);
 		static std::string	rplChannelModeIs(const std::string &nickname, const std::string &channelName, const std::string &modes, const std::string &modesParams);
+		static std::string	rplChannelModeChange(const std::string &nickname, const std::string &channelName, const std::vector<std::string> &params);
 };

@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/07 11:24:26 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/13 16:35:08 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/16 14:55:43 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -186,10 +186,7 @@ void CommandHandler::handleKick(const std::vector<std::string> &params, Client &
 
 void CommandHandler::handleModes(const std::vector<std::string> &params, Client &client, Server &server) {
 	if (params.size() < 2)
-	{
-		std::string error = MessageHelper::errNeedMoreParams("MODE");
-		return (void)send(client.getFd(), error.c_str(), error.length(), 0);
-	}
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("MODE"));
 	const std::string& channelName = params[1];
 
 	Channel *channel = server.getChannel(channelName);
@@ -233,7 +230,61 @@ void CommandHandler::handleModes(const std::vector<std::string> &params, Client 
 			adding = true;
 		else if (modeChar == '-')
 			adding = false;
+		else if (modeChar == 'i' || modeChar == 't')
+		{
+			if (adding)
+				channel->setMode(modeChar);
+			else
+				channel->unsetMode(modeChar);
+		}
+
+		else if (modeChar == 'k')
+		{
+			if (adding)
+			{
+				if (params.size() <= nextParamIndex)
+					return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("MODE"));
+				channel->setKey(params[nextParamIndex++]);
+			}
+			else
+				channel->unsetKey();
+		}
+
+		else if (modeChar == 'l')
+		{
+			if (adding)
+			{
+				if (params.size() <= nextParamIndex)
+					return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("MODE"));
+				int limit = atoi(params[nextParamIndex++].c_str());
+				channel->setUserLimit(limit);
+			}
+			else
+				channel->unsetUserLimit();
+		}
+		else if (modeChar == 'o')
+		{
+			if (params.size() <= nextParamIndex)
+				return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("MODE"));
+			std::string nick = params[nextParamIndex++];
+
+			Client *targetClient = channel->getClientByNick(nick);
+
+			if (!targetClient)
+				return MessageHelper::sendMsgToClient(&client, MessageHelper::errUserNotInChannel(client.getNickname(), channelName));
+			if (adding)
+				channel->addOperator(targetClient);
+			else
+				channel->removeOperator(targetClient);
+		}
+		else
+			return MessageHelper::sendMsgToClient(&client, MessageHelper::errUnknownModeError(client.getNickname(), modeChar));
 	}
+
+	std::vector<std::string> modeParams(params.begin() + 2, params.end());
+	std::string usermask = client.getNickname() + "!" + client.getUsername() + "@" + client.getHostname();
+	std::string modeChangeMsg = MessageHelper::rplChannelModeChange(usermask, channelName, modeParams);
+	channel->broadcast(modeChangeMsg, NULL);
 }
 
 void CommandHandler::handlePing(const std::vector<std::string> &params, Client &client) {
