@@ -34,5 +34,5 @@ namespace CommandHandler {
 
 	typedef void (*CommandFunc)(const std::vector<std::string>&, Client&, Server&);
 	void handleLeave(const std::vector<std::string> &params, Client &client, Server &server);
-	void handleQuit(Client &client, Server &server);
+	void handleQuit(const std::vector<std::string> &params, Client &client, Server &server);
 }
