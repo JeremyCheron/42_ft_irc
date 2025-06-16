@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/13 13:42:16 by cpoulain          #+#    #+#             */
-/*   Updated: 2025/06/16 15:40:31 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/16 16:57:14 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,10 +54,45 @@ std::string MessageHelper::errUserNotInChannel(const std::string &nickname, cons
 	return terminateString(oss.str());
 }
 
+std::string MessageHelper::errNotOnChannel(const std::string &channelName)
+{
+	std::ostringstream oss;
+	oss << ":" << serverName << ERR_NOTONCHANNEL << channelName << MSG_NOTONCHANNEL;
+	return terminateString(oss.str());
+}
+
+std::string MessageHelper::errUserOnChannel(const std::string &targetNick, const std::string &channelName)
+{
+	std::ostringstream oss;
+	oss << ":" << serverName << ERR_USERONCHANNEL << targetNick << " " << channelName << MSG_USERONCHANNEL;
+	return terminateString(oss.str());
+}
+
+std::string MessageHelper::errNoSuchNick(const std::string &targetNick)
+{
+	std::ostringstream oss;
+	oss << ":" << serverName << ERR_NOSUCHNICK << targetNick << MSG_NOSUCHNICK;
+	return terminateString(oss.str());
+}
+
 std::string MessageHelper::errUnknownModeError(const std::string &nickname, const char &modeChar)
 {
 	std::ostringstream oss;
 	oss << ":" << serverName << ERR_UNKNOWNMODE << nickname << " " << modeChar << MSG_UNKNOWNMODE;
+	return terminateString(oss.str());
+}
+
+std::string MessageHelper::msgInvite(const std::string &nickname, const std::string &targetNick, const std::string &channelName)
+{
+	std::ostringstream oss;
+	oss << ":" << nickname << " INVITE " << targetNick << " :" << channelName;
+	return terminateString(oss.str());
+}
+
+std::string MessageHelper::rplChannelInvite(const std::string &nickname, const std::string &targetNick, const std::string &channelName)
+{
+	std::ostringstream oss;
+	oss << ":" << serverName << RPL_INVITING << nickname << " " << targetNick << " :" << channelName;
 	return terminateString(oss.str());
 }
 
