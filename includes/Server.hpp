@@ -36,6 +36,7 @@ class Server {
 		void joinChannel(Client& client, const std::string& string, const std::string &key);
 		Channel * getChannel(std::string string);
 		Client* findClientByNickname(const std::string& nickname);
+		std::map<std::string, Channel*> getChannelsMap();
 
 	private:
 
@@ -50,5 +51,6 @@ class Server {
 		void acceptClient();
 		void handleClientMessage(int clientFd);
 		void disconnectClient(int clientFd);
+
 
 };
