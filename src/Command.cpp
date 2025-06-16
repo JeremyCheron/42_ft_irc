@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/07 11:24:26 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/16 15:29:20 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/16 16:17:25 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,8 +41,9 @@ static std::map<std::string, CommandFunc> initCommandMap() {
 	m["KICK"]    = &CommandHandler::handleKick;
 	m["PING"]    = &CommandHandler::handlePing;
 	m["WHOIS"]   = &CommandHandler::handleWhois;
-	m["PART"]   = &CommandHandler::handleLeave;
+	m["PART"]    = &CommandHandler::handleLeave;
 	m["QUIT"]    = &CommandHandler::handleQuit;
+	m["MODE"]    = &CommandHandler::handleModes;
 	return m;
 }
 
