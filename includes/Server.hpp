@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jcheron <jcheron@student.42.fr>            +#+  +:+       +#+        */
+/*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:20:23 by jcheron           #+#    #+#             */
-/*   Updated: 2025/05/07 11:51:53 by jcheron          ###   ########.fr       */
+/*   Updated: 2025/06/16 15:23:56 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,7 @@ class Server {
 		void rejectClient(int clientFd, const std::string &reason);
 		void run();
 
-		void joinChannel(Client& client, const std::string& string);
+		void joinChannel(Client& client, const std::string& string, const std::string &key);
 		Channel * getChannel(std::string string);
 		Client* findClientByNickname(const std::string& nickname);
 

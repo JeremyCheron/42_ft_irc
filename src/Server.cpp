@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: jcheron <jcheron@student.42.fr>            +#+  +:+       +#+        */
+/*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:23:23 by jcheron           #+#    #+#             */
-/*   Updated: 2025/05/07 11:53:04 by jcheron          ###   ########.fr       */
+/*   Updated: 2025/06/16 15:41:05 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -154,13 +154,20 @@ void Server::rejectClient(int clientFd, const std::string &reason) {
 }
 
 
-void Server::joinChannel(Client &client, const std::string &string) {
+void Server::joinChannel(Client &client, const std::string &string, const std::string &key) {
 	std::cout << "Client " << client.getNickname() << " is trying to join channel: " << string << std::endl;
 	Channel *channel = NULL;
 	std::map<std::string, Channel *>::iterator it = _channelsMap.find(string);
 	if (it != _channelsMap.end()) {
 		channel = it->second;
+		if (channel->hasMode('i') && !channel->isClientInvited(&client))
+			return MessageHelper::sendMsgToClient(&client, MessageHelper::errInviteOnlyChannel(client.getNickname(), string));
+		else if (channel->hasMode('k') && !channel->checkKey(key))
+			return MessageHelper::sendMsgToClient(&client, MessageHelper::errBadChannelKey(client.getNickname(), string));
+		else if (channel->hasMode('l') && channel->isChannelFull())
+			return MessageHelper::sendMsgToClient(&client, MessageHelper::errChannelIsFull(client.getNickname(), string));
 		channel->addClient(&client, false);
+		channel->removeInvitation(&client);
 		std::cout << client.getNickname() << " joined channel " << string << std::endl;
 	} else {
 		channel = new Channel(string);

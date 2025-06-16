@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/07 11:24:26 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/16 14:55:43 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/16 15:29:20 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -96,10 +96,10 @@ void CommandHandler::handlePass(const std::vector<std::string> &params, Client &
 
 void CommandHandler::handleJoin(const std::vector<std::string> &params, Client &client, Server &server) {
 	std::cout << "\033[1;34m[JOIN]\033[0m Commande JOIN reçue de " << client.getNickname() << std::endl;
-	if (params.size() < 2) return;
+	if (params.size() < 2) return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("JOIN"));
 	if (client.isRegistered()) {
 		std::string channel = params[1];
-		server.joinChannel(client, channel);
+		server.joinChannel(client, channel, params.size() < 3 ? "" : params[2]);
 	}
 }
 
@@ -143,7 +143,10 @@ void CommandHandler::handleTopic(const std::vector<std::string> &params, Client 
 			send(client.getFd(), topicMsg.c_str(), topicMsg.size(), 0);
 			std::cout << "\033[1;35m[TOPIC]\033[0m Topic actuel de " << channelName << ": '" << topic << "'" << std::endl;
 		}
-	} else {
+	} else if (channel->hasMode('t') && !channel->isClientOperator(&client)) {
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::errNotChannelOperator(client.getNickname(), channelName));
+	}
+	else {
 		std::string newTopic;
 		for (size_t i = 2; i < params.size(); ++i) {
 			if (i > 2) newTopic += " ";
