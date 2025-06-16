@@ -41,6 +41,8 @@ static std::map<std::string, CommandFunc> initCommandMap() {
 	m["KICK"]    = &CommandHandler::handleKick;
 	m["PING"]    = &CommandHandler::handlePing;
 	m["WHOIS"]   = &CommandHandler::handleWhois;
+	m["PART"]   = &CommandHandler::handleLeave;
+	m["QUIT"]    = &CommandHandler::handleQuit;
 	return m;
 }
 
@@ -389,7 +391,8 @@ void CommandHandler::handleLeave(const std::vector<std::string> &params, Client 
 
 
 
-void CommandHandler::handleQuit(Client &client, Server &server) {
+void CommandHandler::handleQuit(const std::vector<std::string> &params, Client &client, Server &server) {
+	(void)params;
     const std::map<std::string, Channel *>& channels = server.getChannelsMap();
     for (std::map<std::string, Channel *>::const_iterator it = channels.begin(); it != channels.end(); ++it) {
         Channel *channel = it->second;
