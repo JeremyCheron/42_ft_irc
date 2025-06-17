@@ -147,26 +147,51 @@ void CommandHandler::handleJoin(const std::vector<std::string> &params, Client &
 }
 
 void CommandHandler::handlePrivmsg(const std::vector<std::string> &params, Client &client, Server &server) {
-	if (params.size() < 3) return;
+	if (params.size() < 3)
+		return;
+
 	std::string target = params[1];
+
+	// 🔧 Correction ici : construire le message proprement
 	std::string message;
+	bool first = true;
 	for (size_t i = 2; i < params.size(); ++i) {
-		if (i > 2) message += " ";
-		message += params[i];
+		if (first && params[i][0] == ':')
+			message += params[i].substr(1);
+		else
+			message += (first ? "" : " ") + params[i];
+		first = false;
 	}
-	if (!target.empty() && !message.empty()) {
+
+	if (target.empty() || message.empty())
+		return;
+
+	std::string fullMsg = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIp()
+		+ " PRIVMSG " + target + " :" + message + "\r\n";
+
+	if (target[0] == '#') {
+		// MESSAGE À UN CHANNEL
 		Channel* channel = server.getChannel(target);
 		std::cout << "\033[1;35m[PRIVMSG]\033[0m Message de " << client.getNickname() << " vers " << target << ": " << message << std::endl;
 		if (channel && channel->getClients().count(&client)) {
 			std::cout << "\033[1;33m[INFO]\033[0m Broadcast du message à " << target << std::endl;
-			std::string msg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost PRIVMSG " + target + " :" + message + "\r\n";
-			channel->broadcast(msg, &client);
-		}
-		else {
+			channel->broadcast(fullMsg, &client);
+		} else {
 			std::cout << "\033[1;31m[ERROR]\033[0m Channel " << target << " inexistant ou client non membre." << std::endl;
+		}
+	} else {
+		// MESSAGE PRIVÉ À UN UTILISATEUR
+		Client* targetClient = server.findClientByNickname(target);
+		if (targetClient) {
+			std::cout << "\033[1;35m[PRIVMSG]\033[0m MP de " << client.getNickname() << " à " << target << ": " << message << std::endl;
+			send(targetClient->getFd(), fullMsg.c_str(), fullMsg.length(), 0);
+		} else {
+			std::cout << "\033[1;31m[ERROR]\033[0m Utilisateur " << target << " introuvable." << std::endl;
 		}
 	}
 }
+
+
 
 void CommandHandler::handleTopic(const std::vector<std::string> &params, Client &client, Server &server) {
 	if (params.size() < 2) return;

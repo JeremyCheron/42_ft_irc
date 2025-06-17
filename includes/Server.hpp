@@ -44,7 +44,7 @@ class Server {
 		int _port;
 		std::string _password;
 		std::vector<pollfd> _pollFds;
-		std::map<int, Client> _clients;
+		std::map<int, Client*> _clients;
 		std::map<std::string, Channel*> _channelsMap;
 
 		void setupSocket();

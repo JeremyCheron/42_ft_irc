@@ -20,7 +20,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <cerrno>
-
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h> 
+#include <cstdio>
+#include <cstdlib> 
 Server::Server(int port, const std::string &password)
 	: _port(port), _password(password) {
 	setupSocket();
@@ -86,8 +90,10 @@ void Server::acceptClient() {
 	socklen_t len = sizeof(clientAddr);
 	int clientFd = accept(_serverSocket, (struct sockaddr *) &clientAddr, &len);
 
-	if (clientFd < 0)
+	if (clientFd < 0) {
+		perror("accept");
 		return;
+	}
 
 	fcntl(clientFd, F_SETFL, O_NONBLOCK);
 
@@ -96,9 +102,14 @@ void Server::acceptClient() {
 	pfd.events = POLLIN;
 	_pollFds.push_back(pfd);
 
-	_clients[clientFd] = Client(clientFd);
+	Client* client = new Client(clientFd);
+	std::string ip = inet_ntoa(clientAddr.sin_addr);
+	client->setIp(ip);
+	_clients[clientFd] = client;
 	std::cout << "New client connected: fd=" << clientFd << std::endl;
 }
+
+
 
 void Server::handleClientMessage(int clientFd) {
 	char buffer[512];
@@ -116,22 +127,52 @@ void Server::handleClientMessage(int clientFd) {
 		disconnectClient(clientFd);
 		return;
 	}
-	buffer[bytes] = '\0';
-	Client &client = _clients[clientFd];
-	client.appendToBuffeR(std::string(buffer));
 
-	std::string &buf = const_cast<std::string &>(client.getBuffer());
+	buffer[bytes] = '\0';
+
+	Client* client = _clients[clientFd];
+	client->appendToBuffeR(std::string(buffer));
+
+	std::string& buf = const_cast<std::string&>(client->getBuffer());
 	size_t pos;
 	while ((pos = buf.find('\n')) != std::string::npos) {
 		std::string line = buf.substr(0, pos);
-		client.clearLineBuffer(pos + 1);
+		client->clearLineBuffer(pos + 1);
 		if (!line.empty() && line[line.size() - 1] == '\r')
 			line.erase(line.size() - 1);
+
 		std::cout << "Parsed line from fd=" << clientFd << ": [" << line << "]" << std::endl;
 
-		CommandHandler::handleCommand(line, client, *this);
+		// 🧠 DÉTECTION DCC SEND
+		if (line.find("DCC SEND") != std::string::npos) {
+			std::cout << "\033[1;36m[DCC DETECTÉ]\033[0m : " << line << std::endl;
+
+			// Essai de parsing simple
+			size_t dccPos = line.find("DCC SEND");
+			std::istringstream iss(line.substr(dccPos));
+			std::string dcc, send, filename, ipStr, portStr, sizeStr;
+			iss >> dcc >> send >> filename >> ipStr >> portStr >> sizeStr;
+
+			if (!filename.empty() && !ipStr.empty() && !portStr.empty()) {
+				uint32_t ipNum = strtoul(ipStr.c_str(), NULL, 10);
+				in_addr ipAddr;
+				ipAddr.s_addr = htonl(ipNum);
+				std::string ip = inet_ntoa(ipAddr);
+
+				std::cout << "\033[1;35m[FICHIER]\033[0m "
+				          << "Nom: " << filename
+				          << ", IP: " << ip
+				          << ", Port: " << portStr
+				          << ", Taille: " << sizeStr << std::endl;
+			}
+		}
+
+		// traitement normal
+		CommandHandler::handleCommand(line, *client, *this);
 	}
 }
+
+
 
 void Server::disconnectClient(int clientFd) {
 	std::cout << "Client disconnected: fd=" << clientFd << std::endl;
@@ -176,7 +217,7 @@ void Server::joinChannel(Client &client, const std::string &string, const std::s
 	}
 
 	// Envoi du message JOIN au client
-	std::string joinMsg = ":" + client.getNickname() + "!" + client.getUsername() + "@localhost JOIN :" + string +
+	std::string joinMsg = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIp() + " JOIN :" + string +
 	                      "\r\n";
 	send(client.getFd(), joinMsg.c_str(), joinMsg.length(), 0);
 
@@ -241,12 +282,13 @@ Channel * Server::getChannel(std::string string) {
 }
 
 Client* Server::findClientByNickname(const std::string& nickname) {
-	for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
-		if (it->second.getNickname() == nickname)
-			return &it->second;
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->second->getNickname() == nickname)
+			return it->second;
 	}
 	return NULL;
 }
+
 
 std::map<std::string, Channel *> Server::getChannelsMap() {
 	return _channelsMap;

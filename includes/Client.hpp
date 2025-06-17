@@ -37,6 +37,9 @@ class Client {
 
 		bool isRegistered() const;
 
+		void setIp(const std::string& addr) { ip = addr; }
+		const std::string& getIp() const { return ip; }
+
 	private:
 
 		int _fd;
@@ -45,4 +48,5 @@ class Client {
 		std::string _hostname;
 		std::string _buffer;
 		bool _authenticated;
+		std::string ip;
 };
