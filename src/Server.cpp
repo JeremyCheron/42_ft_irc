@@ -156,10 +156,7 @@ void Server::acceptClient()
 	int clientFd = accept(_serverSocket, (struct sockaddr *)&clientAddr, &len);
 
 	if (clientFd < 0)
-	{
-		perror("accept");
 		return;
-	}
 
 	fcntl(clientFd, F_SETFL, O_NONBLOCK);
 
