@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/07 11:24:26 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/17 14:35:01 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 15:55:55 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -283,6 +283,7 @@ void CommandHandler::handleModes(const std::vector<std::string> &params, Client 
 	if (params.size() < 2)
 		return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("MODE"));
 	const std::string &channelName = params[1];
+	if (channelName == client.getNickname()) return ;
 
 	Channel *channel = server.getChannel(channelName);
 
