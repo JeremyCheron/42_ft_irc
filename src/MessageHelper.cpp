@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/13 13:42:16 by cpoulain          #+#    #+#             */
-/*   Updated: 2025/06/16 16:57:14 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 13:26:29 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -125,6 +125,21 @@ std::string MessageHelper::errChannelIsFull(const std::string &nickname, const s
 	oss << ":" << serverName << ERR_CHANNELISFULL << nickname << " " << channelName << MSG_CHANNELISFULL;
 	return terminateString(oss.str());
 }
+
+std::string MessageHelper::errInvalidCapSubCommand(const std::string &nickname, const std::string &sub)
+{
+	std::ostringstream oss;
+	oss << ":" << serverName << ERR_INVALIDCAPCMD << nickname << " " << sub << MSG_INVALIDCAPCMD;
+	return terminateString(oss.str());
+}
+
+std::string MessageHelper::msgCapLS(const std::string &nickname, const std::string &caps)
+{
+	std::ostringstream oss;
+	oss << ":" << serverName << " CAP " << nickname << " LS :" << caps;
+	return terminateString(oss.str());
+}
+
 
 std::string MessageHelper::rplChannelModeIs(const std::string &nickname, const std::string &channelName, const std::string &modes, const std::string &modesParams)
 {

@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/07 11:24:26 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/16 17:02:49 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 13:40:27 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,6 +45,7 @@ static std::map<std::string, CommandFunc> initCommandMap() {
 	m["QUIT"]    = &CommandHandler::handleQuit;
 	m["MODE"]    = &CommandHandler::handleModes;
 	m["INVITE"]  = &CommandHandler::handleInvite;
+	m["CAP"]     = &CommandHandler::handleCap;
 	return m;
 }
 
@@ -384,6 +385,28 @@ void	CommandHandler::handleInvite(const std::vector<std::string> &params, Client
 	channel->inviteClient(targetClient);
 	MessageHelper::sendMsgToClient(targetClient, MessageHelper::msgInvite(client.getNickname(), targetNick, channelName));
 	MessageHelper::sendMsgToClient(&client, MessageHelper::rplChannelInvite(client.getNickname(), targetNick, channelName));
+}
+
+void CommandHandler::handleCap(const std::vector<std::string> &params, Client &client, Server &server)
+{
+	if (params.size() < 2) return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("CAP"));
+	(void)server;
+
+	std::string subCommand = params[1];
+
+	if (subCommand == "LS")
+	{
+		std::string nick = client.isRegistered() ? client.getNickname() : "*";
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::msgCapLS(nick, ""));
+
+	} else if (subCommand == "END")
+	{
+		return ; // Do nothing for END
+	} else
+	{
+		std::string nick = client.isRegistered() ? client.getNickname() : "*";
+		return MessageHelper::sendMsgToClient(&client, MessageHelper::errInvalidCapSubCommand(nick, subCommand));
+	}
 }
 
 void CommandHandler::handleLeave(const std::vector<std::string> &params, Client &client, Server &server) {

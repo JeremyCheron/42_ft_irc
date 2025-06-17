@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/13 13:36:13 by cpoulain          #+#    #+#             */
-/*   Updated: 2025/06/16 16:56:01 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 13:23:06 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,9 @@ const std::string	MSG_BADCHANNELKEY		= " :Cannot join channel (+k)";
 
 const std::string	ERR_CHANNELISFULL		= " 471 ";
 const std::string	MSG_CHANNELISFULL		= " :Cannot join channel (+l)";
+
+const std::string	ERR_INVALIDCAPCMD		= " 410 ";
+const std::string	MSG_INVALIDCAPCMD		= " :Invalid CAP subcommand";
 
 const std::string	RPL_CHANNELMODEIS		= " 324 ";
 
