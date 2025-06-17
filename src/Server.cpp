@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:23:23 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/17 14:34:52 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 15:01:18 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,9 +26,13 @@
 #include <cstdio>
 #include <cstdlib>
 
+Server* Server::instance = NULL;
+
 Server::Server(int port, const std::string &password)
 	: _port(port), _password(password)
 {
+	instance = this;
+	setupSignalHandler();
 	setupSocket();
 }
 
@@ -71,6 +75,53 @@ void Server::setupSocket()
 	_pollFds.push_back(pfd);
 
 	std::cout << "Server started on port " << _port << std::endl;
+}
+
+void Server::shutdown()
+{
+	std::cout << "\033[1;33m[Shutdown]\033[0m Server is shutting down..." << std::endl;
+
+	instance->_pollFds.clear();
+	for (std::map<int, Client*>::iterator it = instance->_clients.begin(); it != instance->_clients.end(); ++it)
+	{
+		int fd = it->first;
+		Client* client = it->second;
+		std::cout << "Closing client fd=" << fd << std::endl;
+		close(fd);
+		delete client;
+	}
+	instance->_clients.clear();
+
+	for (std::map<std::string, Channel*>::iterator it = instance->_channelsMap.begin(); it != instance->_channelsMap.end(); ++it)
+	{
+		delete it->second;
+	}
+	instance->_channelsMap.clear();
+	if (instance->_serverSocket >= 0)
+	{
+		close(instance->_serverSocket);
+		instance->_serverSocket = -1;
+	}
+	instance->~Server();
+}
+
+void Server::signalHandler(int signum)
+{
+	std::cout << "\n\033[1;31m[Signal]\033[0m Caught signal " << signum << ", shutting down..." << std::endl;
+	if (Server::instance)
+		Server::instance->shutdown();
+	exit(0);
+}
+
+void Server::setupSignalHandler()
+{
+	struct sigaction sa;
+	sa.sa_handler = Server::signalHandler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+
+	if (sigaction(SIGINT, &sa, NULL) == -1 || sigaction(SIGTERM, &sa, NULL) == -1)
+		throw std::runtime_error("Failed to set signal handlers");
 }
 
 void Server::run()
@@ -195,6 +246,8 @@ void Server::disconnectClient(int clientFd)
 {
 	std::cout << "Client disconnected: fd=" << clientFd << std::endl;
 	close(clientFd);
+	Client *client = _clients[clientFd];
+	delete client;
 	_clients.erase(clientFd);
 
 	for (std::vector<pollfd>::iterator it = _pollFds.begin(); it != _pollFds.end(); ++it)

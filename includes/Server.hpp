@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:20:23 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/16 15:23:56 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 14:44:45 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,7 @@
 #include <netinet/in.h>
 #include "Channel.hpp"
 #include "Client.hpp"
+#include <csignal>
 
 class Client;
 
@@ -32,6 +33,7 @@ class Server {
 		std::string getPassword() const;
 		void rejectClient(int clientFd, const std::string &reason);
 		void run();
+		void shutdown();
 
 		void joinChannel(Client& client, const std::string& string, const std::string &key);
 		Channel * getChannel(std::string string);
@@ -40,14 +42,18 @@ class Server {
 
 	private:
 
+		static Server	*instance;
+		static void signalHandler(int signum);
+
 		int _serverSocket;
 		int _port;
 		std::string _password;
 		std::vector<pollfd> _pollFds;
-		std::map<int, Client*> _clients;
+		std::map<int, Client *> _clients;
 		std::map<std::string, Channel*> _channelsMap;
 
 		void setupSocket();
+		void setupSignalHandler();
 		void acceptClient();
 		void handleClientMessage(int clientFd);
 		void disconnectClient(int clientFd);
