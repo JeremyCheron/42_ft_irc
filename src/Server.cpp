@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:23:23 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/16 15:41:05 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 10:56:07 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -124,13 +124,12 @@ void Server::handleClientMessage(int clientFd) {
 	size_t pos;
 	while ((pos = buf.find('\n')) != std::string::npos) {
 		std::string line = buf.substr(0, pos);
+		client.clearLineBuffer(pos + 1);
 		if (!line.empty() && line[line.size() - 1] == '\r')
 			line.erase(line.size() - 1);
 		std::cout << "Parsed line from fd=" << clientFd << ": [" << line << "]" << std::endl;
 
 		CommandHandler::handleCommand(line, client, *this);
-
-		client.clearLineBuffer(pos + 1);
 	}
 }
 
