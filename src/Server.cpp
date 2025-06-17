@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:23:23 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/17 10:56:07 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 14:34:52 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,23 +22,28 @@
 #include <cerrno>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <sys/socket.h> 
+#include <sys/socket.h>
 #include <cstdio>
-#include <cstdlib> 
+#include <cstdlib>
+
 Server::Server(int port, const std::string &password)
-	: _port(port), _password(password) {
+	: _port(port), _password(password)
+{
 	setupSocket();
 }
 
-Server::~Server() {
+Server::~Server()
+{
 	close(_serverSocket);
 }
 
-std::string Server::getPassword() const {
+std::string Server::getPassword() const
+{
 	return _password;
 }
 
-void Server::setupSocket() {
+void Server::setupSocket()
+{
 	_serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (_serverSocket < 0)
 		throw std::runtime_error("Socket creation failed");
@@ -52,7 +57,7 @@ void Server::setupSocket() {
 	serverAddr.sin_addr.s_addr = INADDR_ANY;
 	serverAddr.sin_port = htons(_port);
 
-	if (bind(_serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0)
+	if (bind(_serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
 		throw std::runtime_error("Bind failed");
 
 	if (listen(_serverSocket, 10) < 0)
@@ -68,29 +73,38 @@ void Server::setupSocket() {
 	std::cout << "Server started on port " << _port << std::endl;
 }
 
-void Server::run() {
-	while (true) {
+void Server::run()
+{
+	while (true)
+	{
 		int ret = poll(&_pollFds[0], _pollFds.size(), -1);
-		if (ret < 0) {
+		if (ret < 0)
+		{
 			std::cerr << "Poll error" << std::endl;
 			continue;
 		}
-		for (size_t i = 0; i < _pollFds.size(); ++i) {
-			if (_pollFds[i].fd == _serverSocket) {
+		for (size_t i = 0; i < _pollFds.size(); ++i)
+		{
+			if (_pollFds[i].fd == _serverSocket)
+			{
 				acceptClient();
-			} else {
+			}
+			else
+			{
 				handleClientMessage(_pollFds[i].fd);
 			}
 		}
 	}
 }
 
-void Server::acceptClient() {
+void Server::acceptClient()
+{
 	sockaddr_in clientAddr;
 	socklen_t len = sizeof(clientAddr);
-	int clientFd = accept(_serverSocket, (struct sockaddr *) &clientAddr, &len);
+	int clientFd = accept(_serverSocket, (struct sockaddr *)&clientAddr, &len);
 
-	if (clientFd < 0) {
+	if (clientFd < 0)
+	{
 		perror("accept");
 		return;
 	}
@@ -102,27 +116,29 @@ void Server::acceptClient() {
 	pfd.events = POLLIN;
 	_pollFds.push_back(pfd);
 
-	Client* client = new Client(clientFd);
+	Client *client = new Client(clientFd);
 	std::string ip = inet_ntoa(clientAddr.sin_addr);
 	client->setIp(ip);
 	_clients[clientFd] = client;
 	std::cout << "New client connected: fd=" << clientFd << std::endl;
 }
 
-
-
-void Server::handleClientMessage(int clientFd) {
+void Server::handleClientMessage(int clientFd)
+{
 	char buffer[512];
 	std::memset(buffer, 0, sizeof(buffer));
 	int bytes = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
 
-	if (bytes < 0) {
+	if (bytes < 0)
+	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return;
 		std::cerr << "Recv error on fd=" << clientFd << std::endl;
 		disconnectClient(clientFd);
 		return;
-	} else if (bytes == 0) {
+	}
+	else if (bytes == 0)
+	{
 		std::cerr << "Client closed connection: fd=" << clientFd << std::endl;
 		disconnectClient(clientFd);
 		return;
@@ -130,12 +146,13 @@ void Server::handleClientMessage(int clientFd) {
 
 	buffer[bytes] = '\0';
 
-	Client* client = _clients[clientFd];
+	Client *client = _clients[clientFd];
 	client->appendToBuffeR(std::string(buffer));
 
-	std::string& buf = const_cast<std::string&>(client->getBuffer());
+	std::string &buf = const_cast<std::string &>(client->getBuffer());
 	size_t pos;
-	while ((pos = buf.find('\n')) != std::string::npos) {
+	while ((pos = buf.find('\n')) != std::string::npos)
+	{
 		std::string line = buf.substr(0, pos);
 		client->clearLineBuffer(pos + 1);
 		if (!line.empty() && line[line.size() - 1] == '\r')
@@ -144,7 +161,8 @@ void Server::handleClientMessage(int clientFd) {
 		std::cout << "Parsed line from fd=" << clientFd << ": [" << line << "]" << std::endl;
 
 		// 🧠 DÉTECTION DCC SEND
-		if (line.find("DCC SEND") != std::string::npos) {
+		if (line.find("DCC SEND") != std::string::npos)
+		{
 			std::cout << "\033[1;36m[DCC DETECTÉ]\033[0m : " << line << std::endl;
 
 			// Essai de parsing simple
@@ -153,17 +171,18 @@ void Server::handleClientMessage(int clientFd) {
 			std::string dcc, send, filename, ipStr, portStr, sizeStr;
 			iss >> dcc >> send >> filename >> ipStr >> portStr >> sizeStr;
 
-			if (!filename.empty() && !ipStr.empty() && !portStr.empty()) {
+			if (!filename.empty() && !ipStr.empty() && !portStr.empty())
+			{
 				uint32_t ipNum = strtoul(ipStr.c_str(), NULL, 10);
 				in_addr ipAddr;
 				ipAddr.s_addr = htonl(ipNum);
 				std::string ip = inet_ntoa(ipAddr);
 
 				std::cout << "\033[1;35m[FICHIER]\033[0m "
-				          << "Nom: " << filename
-				          << ", IP: " << ip
-				          << ", Port: " << portStr
-				          << ", Taille: " << sizeStr << std::endl;
+						  << "Nom: " << filename
+						  << ", IP: " << ip
+						  << ", Port: " << portStr
+						  << ", Taille: " << sizeStr << std::endl;
 			}
 		}
 
@@ -172,33 +191,36 @@ void Server::handleClientMessage(int clientFd) {
 	}
 }
 
-
-
-void Server::disconnectClient(int clientFd) {
+void Server::disconnectClient(int clientFd)
+{
 	std::cout << "Client disconnected: fd=" << clientFd << std::endl;
 	close(clientFd);
 	_clients.erase(clientFd);
 
-	for (std::vector<pollfd>::iterator it = _pollFds.begin(); it != _pollFds.end(); ++it) {
-		if (it->fd == clientFd) {
+	for (std::vector<pollfd>::iterator it = _pollFds.begin(); it != _pollFds.end(); ++it)
+	{
+		if (it->fd == clientFd)
+		{
 			_pollFds.erase(it);
 			break;
 		}
 	}
 }
 
-void Server::rejectClient(int clientFd, const std::string &reason) {
+void Server::rejectClient(int clientFd, const std::string &reason)
+{
 	std::string message = ":ft_irc 464 * :" + reason + "\r\n";
 	send(clientFd, message.c_str(), message.size(), 0);
 	disconnectClient(clientFd);
 }
 
-
-void Server::joinChannel(Client &client, const std::string &string, const std::string &key) {
+void Server::joinChannel(Client &client, const std::string &string, const std::string &key)
+{
 	std::cout << "Client " << client.getNickname() << " is trying to join channel: " << string << std::endl;
 	Channel *channel = NULL;
 	std::map<std::string, Channel *>::iterator it = _channelsMap.find(string);
-	if (it != _channelsMap.end()) {
+	if (it != _channelsMap.end())
+	{
 		channel = it->second;
 		if (channel->hasMode('i') && !channel->isClientInvited(&client))
 			return MessageHelper::sendMsgToClient(&client, MessageHelper::errInviteOnlyChannel(client.getNickname(), string));
@@ -209,7 +231,9 @@ void Server::joinChannel(Client &client, const std::string &string, const std::s
 		channel->addClient(&client, false);
 		channel->removeInvitation(&client);
 		std::cout << client.getNickname() << " joined channel " << string << std::endl;
-	} else {
+	}
+	else
+	{
 		channel = new Channel(string);
 		_channelsMap[string] = channel;
 		channel->addClient(&client, true);
@@ -218,15 +242,18 @@ void Server::joinChannel(Client &client, const std::string &string, const std::s
 
 	// Envoi du message JOIN au client
 	std::string joinMsg = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIp() + " JOIN :" + string +
-	                      "\r\n";
+						  "\r\n";
 	send(client.getFd(), joinMsg.c_str(), joinMsg.length(), 0);
 
 	// Envoi du topic
 	std::string topic = channel->getTopic();
-	if (topic.empty()) {
+	if (topic.empty())
+	{
 		std::string noTopic = ":ft_irc 331 " + client.getNickname() + " " + string + " :No topic is set\r\n";
 		send(client.getFd(), noTopic.c_str(), noTopic.length(), 0);
-	} else {
+	}
+	else
+	{
 		std::string topicMsg = ":ft_irc 332 " + client.getNickname() + " " + string + " :" + topic + "\r\n";
 		send(client.getFd(), topicMsg.c_str(), topicMsg.length(), 0);
 	}
@@ -234,7 +261,8 @@ void Server::joinChannel(Client &client, const std::string &string, const std::s
 	// Envoi de la liste des utilisateurs
 	std::string names = ":ft_irc 353 " + client.getNickname() + " = " + string + " :";
 	bool first = true;
-	for (std::map<Client*, bool>::const_iterator cit = channel->getClients().begin(); cit != channel->getClients().end(); ++cit) {
+	for (std::map<Client *, bool>::const_iterator cit = channel->getClients().begin(); cit != channel->getClients().end(); ++cit)
+	{
 		if (!first)
 			names += " ";
 		first = false;
@@ -249,47 +277,58 @@ void Server::joinChannel(Client &client, const std::string &string, const std::s
 
 	// LOGS AMÉLIORÉS AVEC COULEURS
 	std::cout << "\033[1;34m[JOIN]\033[0m Client \033[1;32m" << client.getNickname() << "\033[0m (fd=" << client.getFd() << ") rejoint le channel \033[1;36m" << string << "\033[0m" << std::endl;
-	if (it != _channelsMap.end()) {
+	if (it != _channelsMap.end())
+	{
 		std::cout << "\033[1;33m[INFO]\033[0m Ajout de " << client.getNickname() << " dans le channel existant " << string << std::endl;
-	} else {
+	}
+	else
+	{
 		std::cout << "\033[1;33m[INFO]\033[0m Création du channel \033[1;36m" << string << "\033[0m et ajout de " << client.getNickname() << " comme opérateur" << std::endl;
 	}
 
-	if (topic.empty()) {
+	if (topic.empty())
+	{
 		std::cout << "\033[1;35m[TOPIC]\033[0m Aucun topic défini pour " << string << std::endl;
-	} else {
+	}
+	else
+	{
 		std::cout << "\033[1;35m[TOPIC]\033[0m Topic de " << string << ": '" << topic << "'" << std::endl;
 	}
 
 	// Envoi de la liste des utilisateurs
 	std::cout << "\033[1;36m[USERS]\033[0m Liste des utilisateurs dans " << string << ": ";
-	for (std::map<Client*, bool>::const_iterator cit = channel->getClients().begin(); cit != channel->getClients().end(); ++cit) {
+	for (std::map<Client *, bool>::const_iterator cit = channel->getClients().begin(); cit != channel->getClients().end(); ++cit)
+	{
 		if (channel->isClientOperator(cit->first))
 			std::cout << "@";
 		std::cout << cit->first->getNickname();
-		if (++std::map<Client*, bool>::const_iterator(cit) != channel->getClients().end())
+		if (++std::map<Client *, bool>::const_iterator(cit) != channel->getClients().end())
 			std::cout << ", ";
 	}
 	std::cout << std::endl;
 }
 
-Channel * Server::getChannel(std::string string) {
+Channel *Server::getChannel(std::string string)
+{
 	std::map<std::string, Channel *>::iterator it = _channelsMap.find(string);
-	if (it != _channelsMap.end()) {
+	if (it != _channelsMap.end())
+	{
 		return it->second;
 	}
 	return NULL;
 }
 
-Client* Server::findClientByNickname(const std::string& nickname) {
-	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+Client *Server::findClientByNickname(const std::string &nickname)
+{
+	for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+	{
 		if (it->second->getNickname() == nickname)
 			return it->second;
 	}
 	return NULL;
 }
 
-
-std::map<std::string, Channel *> Server::getChannelsMap() {
+std::map<std::string, Channel *> Server::getChannelsMap()
+{
 	return _channelsMap;
 }
