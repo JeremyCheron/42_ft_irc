@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:20:23 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/17 14:44:45 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 15:44:16 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,7 @@
 #include "Channel.hpp"
 #include "Client.hpp"
 #include <csignal>
+#include "Bot.hpp"
 
 class Client;
 
@@ -45,6 +46,7 @@ class Server {
 		static Server	*instance;
 		static void signalHandler(int signum);
 
+		Bot	_bot;
 		int _serverSocket;
 		int _port;
 		std::string _password;
@@ -57,6 +59,5 @@ class Server {
 		void acceptClient();
 		void handleClientMessage(int clientFd);
 		void disconnectClient(int clientFd);
-
-
+		Channel *getChannelFromMessage(const std::string &message);
 };

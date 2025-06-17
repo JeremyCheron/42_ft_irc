@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 12:23:23 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/17 15:01:18 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 15:38:22 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,6 +38,7 @@ Server::Server(int port, const std::string &password)
 
 Server::~Server()
 {
+	_bot.~Bot();
 	close(_serverSocket);
 }
 
@@ -239,7 +240,24 @@ void Server::handleClientMessage(int clientFd)
 
 		// traitement normal
 		CommandHandler::handleCommand(line, *client, *this);
+
+		Channel *channel = getChannelFromMessage(line);
+		if (channel)
+			_bot.handleMessage(client, channel, line);
+
 	}
+}
+
+Channel	*Server::getChannelFromMessage(const std::string &message)
+{
+	std::istringstream iss(message);
+	std::string command, channelName;
+	iss >> command >> channelName;
+
+	if (_channelsMap.find(channelName) != _channelsMap.end())
+		return _channelsMap[channelName];
+
+	return NULL;
 }
 
 void Server::disconnectClient(int clientFd)
@@ -287,7 +305,7 @@ void Server::joinChannel(Client &client, const std::string &string, const std::s
 	}
 	else
 	{
-		channel = new Channel(string);
+		channel = new Channel(string, string);
 		_channelsMap[string] = channel;
 		channel->addClient(&client, true);
 		std::cout << client.getNickname() << " created and joined channel " << string << std::endl;
