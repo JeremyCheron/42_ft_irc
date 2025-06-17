@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/07 11:24:26 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/16 16:17:25 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/16 17:02:49 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,6 +44,7 @@ static std::map<std::string, CommandFunc> initCommandMap() {
 	m["PART"]    = &CommandHandler::handleLeave;
 	m["QUIT"]    = &CommandHandler::handleQuit;
 	m["MODE"]    = &CommandHandler::handleModes;
+	m["INVITE"]  = &CommandHandler::handleInvite;
 	return m;
 }
 
@@ -364,6 +365,27 @@ void CommandHandler::handleWhois(const std::vector<std::string> &params, Client 
 
 	std::cout << "[WHOIS for " << targetNick << "]" << std::endl;
 }
+
+void	CommandHandler::handleInvite(const std::vector<std::string> &params, Client &client, Server &server)
+{
+	if (params.size() < 3) return MessageHelper::sendMsgToClient(&client, MessageHelper::errNeedMoreParams("INVITE"));
+	std::string	targetNick = params[1];
+	std::string	channelName = params[2];
+
+	Channel	*channel = server.getChannel(channelName);
+	if (!channel) return MessageHelper::sendMsgToClient(&client, MessageHelper::errNoSuchChannel(channelName));
+	if (!channel->getClients().count(&client)) return MessageHelper::sendMsgToClient(&client, MessageHelper::errNotOnChannel(channelName));
+	if (channel->hasMode('i') && !channel->isClientOperator(&client)) return MessageHelper::sendMsgToClient(&client, MessageHelper::errNotChannelOperator(client.getNickname(), channelName));
+
+	Client	*targetClient = server.findClientByNickname(targetNick);
+	if (!targetClient) return MessageHelper::sendMsgToClient(&client, MessageHelper::errNoSuchNick(targetNick));
+	if (channel->getClients().count(targetClient)) return MessageHelper::sendMsgToClient(&client, MessageHelper::errUserOnChannel(targetNick, channelName));
+
+	channel->inviteClient(targetClient);
+	MessageHelper::sendMsgToClient(targetClient, MessageHelper::msgInvite(client.getNickname(), targetNick, channelName));
+	MessageHelper::sendMsgToClient(&client, MessageHelper::rplChannelInvite(client.getNickname(), targetNick, channelName));
+}
+
 void CommandHandler::handleLeave(const std::vector<std::string> &params, Client &client, Server &server) {
 	if (params.size() < 2) {
 		std::string msg = ":ft_irc 461 " + client.getNickname() + " " + "" + " :Not enough parameters\r\n";
