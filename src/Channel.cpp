@@ -9,7 +9,7 @@
 
 // ──────────────────────────────────── Constructor ─────────────────────────────────────
 
-Channel::Channel(const std::string &topic) : _topic(topic)
+Channel::Channel(const std::string &identifier, const std::string &topic): _topic(topic), _identifier(identifier)
 {
 	std::cout << "\033[1;32m[+] Channel créé : \033[1;36m" << topic << "\033[0m" << std::endl;
 }
@@ -26,6 +26,11 @@ Channel::~Channel()
 std::string Channel::getTopic() const
 {
 	return _topic;
+}
+
+const std::string Channel::getIdentifier() const
+{
+	return this->_identifier;
 }
 
 Client *Channel::getClientByNick(const std::string &nickname)

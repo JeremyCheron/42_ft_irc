@@ -2,8 +2,7 @@
 // Created by Eliam on 10/06/2025.
 //
 
-#ifndef CHANNEL_HPP
-#define CHANNEL_HPP
+#pragma once
 
 #include <map>
 #include <set>
@@ -15,7 +14,8 @@
 class Channel {
 private:
 	std::string					_topic;
-	std::map<Client *, bool>	_clients; //bool pour savoir si un user est operator
+	std::string					_identifier;
+	std::map<Client *, bool>	_clients;
 	std::set<char>				_modes;
 	int							_userLimit;
 	std::string					_key;
@@ -23,13 +23,14 @@ private:
 
 public:
 	// ─────────────────────────────────── Constructor ─────────────────────────────────────
-	Channel(const std::string &topic);
+	Channel(const std::string &identifier, const std::string &topic);
 
 	// ──────────────────────────────────── Destructor ─────────────────────────────────────
 	~Channel();
 
 	// ────────────────────────────────────── Getters ──────────────────────────────────────
 	std::string getTopic() const;
+	const std::string getIdentifier() const;
 
 	// ────────────────────────────────────── Setters ──────────────────────────────────────
 	void setTopic(std::string topic);
@@ -90,5 +91,3 @@ public:
 
 };
 
-
-#endif //CHANNEL_HPP
