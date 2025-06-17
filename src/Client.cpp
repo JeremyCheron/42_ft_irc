@@ -6,7 +6,7 @@
 /*   By: cpoulain <cpoulain@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/06 12:19:27 by jcheron           #+#    #+#             */
-/*   Updated: 2025/06/17 14:35:09 by cpoulain         ###   ########.fr       */
+/*   Updated: 2025/06/17 14:50:07 by cpoulain         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,12 +14,12 @@
 
 #include <iostream>
 
-Client::Client() : _fd(-1)
+Client::Client() : _fd(-1), _authenticated(false)
 {
 	std::cout << "\033[1;32m[+] Client créé (fd=" << _fd << ")\033[0m" << std::endl;
 }
 
-Client::Client(int fd) : _fd(fd)
+Client::Client(int fd) : _fd(fd), _authenticated(false)
 {
 	std::cout << "\033[1;32m[+] Client créé (fd=" << fd << ")\033[0m" << std::endl;
 }
